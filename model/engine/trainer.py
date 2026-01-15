@@ -3,6 +3,7 @@ import os
 import time
 import logging
 import torch
+import wandb
 from torch.nn.parallel import DistributedDataParallel
 from fvcore.nn.precise_bn import get_bn_modules
 import numpy as np
@@ -11,7 +12,7 @@ from collections import OrderedDict
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.engine import DefaultTrainer, SimpleTrainer, TrainerBase
-from detectron2.engine.train_loop import AMPTrainer
+from detectron2.engine.train_loop import AMPTrainer, HookBase
 from detectron2.utils.events import EventStorage
 from detectron2.evaluation import COCOEvaluator, verify_results, PascalVOCDetectionEvaluator, DatasetEvaluators
 from detectron2.data.dataset_mapper import DatasetMapper
@@ -30,6 +31,21 @@ from model.data.dataset_mapper import DatasetMapperTwoCropSeparate
 from model.engine.hooks import LossEvalHook
 
 from model.solver.build import build_lr_scheduler
+
+
+class WandbHook(HookBase):
+    def __init__(self, log_period=20):
+        self.log_period = log_period
+
+    def after_step(self):
+        if self.trainer.iter % self.log_period == 0:
+            metrics = self.trainer.storage.latest()
+            log_dict = {
+                k: v[0] for k, v in metrics.items()
+                if isinstance(v, tuple)
+            }
+            log_dict["iter"] = self.trainer.iter
+            wandb.log(log_dict)
 
 
 class KdTrainer(DefaultTrainer):
@@ -69,16 +85,16 @@ class KdTrainer(DefaultTrainer):
             optimizer=optimizer,
             scheduler=self.scheduler,
         )
-        if not os.path.exists(cfg.OUTPUT_DIR.replace('student','teacher')):
-            os.mkdir(cfg.OUTPUT_DIR.replace('student','teacher'))
-        
+        if not os.path.exists(cfg.OUTPUT_DIR.replace('student', 'teacher')):
+            os.mkdir(cfg.OUTPUT_DIR.replace('student', 'teacher'))
+
         self.t_checkpointer = DetectionCheckpointer(
             model_teacher,
-            cfg.OUTPUT_DIR.replace('student','teacher'),
+            cfg.OUTPUT_DIR.replace('student', 'teacher'),
             optimizer=optimizer,
             scheduler=self.scheduler,
         )
-        
+
         self.start_iter = 0
         self.max_iter = cfg.SOLVER.MAX_ITER
         self.cfg = cfg
@@ -209,7 +225,7 @@ class KdTrainer(DefaultTrainer):
         return new_proposal_inst
 
     def process_pseudo_label(
-        self, proposals_rpn_unsup_k, cur_threshold, proposal_type, psedo_label_method=""
+            self, proposals_rpn_unsup_k, cur_threshold, proposal_type, psedo_label_method=""
     ):
         list_instances = []
         num_proposal_output = 0.0
@@ -248,10 +264,9 @@ class KdTrainer(DefaultTrainer):
         data = next(self._trainer._data_loader_iter)
         # data_q and data_k from different augmentations (q:strong, k:weak)
         # label_strong, label_weak, unlabed_strong, unlabled_weak
-    
+
         label_data_q, label_data_k = data
         data_time = time.perf_counter() - start
-
 
         # input both strong and weak supervised data into model
         label_data_q.extend(label_data_k)
@@ -264,94 +279,91 @@ class KdTrainer(DefaultTrainer):
             if key[:4] == "loss":
                 loss_dict[key] = record_dict[key] * 1
         losses = sum(loss_dict.values())
-        
-        
+
         if self.iter < self.cfg.KD.BURN_UP_STEP:
             pass
 
         elif self.iter == self.cfg.KD.BURN_UP_STEP:
-           self._update_teacher_model(keep_rate=0.00)
+            self._update_teacher_model(keep_rate=0.00)
 
         else:
-          self._update_teacher_model(
+            self._update_teacher_model(
                 keep_rate=self.cfg.KD.EMA_KEEP_RATE)
-        
-          unlabel_data_q = self.remove_label(label_data_q)
-          unlabel_data_k = self.remove_label(label_data_k)
-  
-          record_dict = {}
-          #  generate the pseudo-label using teacher model
-          # note that we do not convert to eval mode, as 1) there is no gradient computed in
-          # teacher model and 2) batch norm layers are not updated as well
-          with torch.no_grad():
-              (
-                  _,
-                  proposals_rpn_unsup_k,
-                  proposals_roih_unsup_k,
-                  _,
-              ) = self.model_teacher(unlabel_data_k, branch="unsup_data_weak")
-  
-          #  Pseudo-labeling
-          cur_threshold = self.cfg.KD.BBOX_THRESHOLD
-  
-          joint_proposal_dict = {}
-          joint_proposal_dict["proposals_rpn"] = proposals_rpn_unsup_k
-          (
-              pesudo_proposals_rpn_unsup_k,
-              nun_pseudo_bbox_rpn,
-          ) = self.process_pseudo_label(
-              proposals_rpn_unsup_k, cur_threshold, "rpn", "thresholding"
-          )
-          joint_proposal_dict["proposals_pseudo_rpn"] = pesudo_proposals_rpn_unsup_k
-          # Pseudo_labeling for ROI head (bbox location/objectness)
-          pesudo_proposals_roih_unsup_k, _ = self.process_pseudo_label(
-              proposals_roih_unsup_k, cur_threshold, "roih", "thresholding"
-          )
-          joint_proposal_dict["proposals_pseudo_roih"] = pesudo_proposals_roih_unsup_k
-  
-          #  add pseudo-label to unlabeled data
-  
-          unlabel_data_q = self.add_label(
-              unlabel_data_q , joint_proposal_dict["proposals_pseudo_roih"]
-          )
-          unlabel_data_k = self.add_label(
-            unlabel_data_k, joint_proposal_dict["proposals_pseudo_roih"]
-          )
-  
-          all_label_data = label_data_q + label_data_k
-          all_unlabel_data = unlabel_data_q
-  
-          record_all_label_data, _, _, _ = self.model(
-              all_label_data, branch="supervised"
-          )
-          record_dict.update(record_all_label_data)
-          record_all_unlabel_data, _, _, _ = self.model(
-              all_unlabel_data, branch="supervised"
-          )
-          new_record_all_unlabel_data = {}
-          for key in record_all_unlabel_data.keys():
-              new_record_all_unlabel_data[key + "_pseudo"] = record_all_unlabel_data[
-                  key
-              ]
-          record_dict.update(new_record_all_unlabel_data)
-  
-          loss_dict = {}
-          for key in record_dict.keys():
-              if key[:4] == "loss":
-                  if key == "loss_rpn_loc_pseudo" or key == "loss_box_reg_pseudo":
-                      # pseudo bbox regression <- 0
-                      loss_dict[key] = record_dict[key] * 0
-                  elif key[-6:] == "pseudo":  # unsupervised loss
-                      loss_dict[key] = (
-                          record_dict[key] *
-                          self.cfg.KD.LOSS_WEIGHT
-                      )
-                  else:  # supervised loss
-                      loss_dict[key] = record_dict[key] * 1
 
-          losses += sum(loss_dict.values())
+            unlabel_data_q = self.remove_label(label_data_q)
+            unlabel_data_k = self.remove_label(label_data_k)
 
+            record_dict = {}
+            #  generate the pseudo-label using teacher model
+            # note that we do not convert to eval mode, as 1) there is no gradient computed in
+            # teacher model and 2) batch norm layers are not updated as well
+            with torch.no_grad():
+                (
+                    _,
+                    proposals_rpn_unsup_k,
+                    proposals_roih_unsup_k,
+                    _,
+                ) = self.model_teacher(unlabel_data_k, branch="unsup_data_weak")
 
+            #  Pseudo-labeling
+            cur_threshold = self.cfg.KD.BBOX_THRESHOLD
+
+            joint_proposal_dict = {}
+            joint_proposal_dict["proposals_rpn"] = proposals_rpn_unsup_k
+            (
+                pesudo_proposals_rpn_unsup_k,
+                nun_pseudo_bbox_rpn,
+            ) = self.process_pseudo_label(
+                proposals_rpn_unsup_k, cur_threshold, "rpn", "thresholding"
+            )
+            joint_proposal_dict["proposals_pseudo_rpn"] = pesudo_proposals_rpn_unsup_k
+            # Pseudo_labeling for ROI head (bbox location/objectness)
+            pesudo_proposals_roih_unsup_k, _ = self.process_pseudo_label(
+                proposals_roih_unsup_k, cur_threshold, "roih", "thresholding"
+            )
+            joint_proposal_dict["proposals_pseudo_roih"] = pesudo_proposals_roih_unsup_k
+
+            #  add pseudo-label to unlabeled data
+
+            unlabel_data_q = self.add_label(
+                unlabel_data_q, joint_proposal_dict["proposals_pseudo_roih"]
+            )
+            unlabel_data_k = self.add_label(
+                unlabel_data_k, joint_proposal_dict["proposals_pseudo_roih"]
+            )
+
+            all_label_data = label_data_q + label_data_k
+            all_unlabel_data = unlabel_data_q
+
+            record_all_label_data, _, _, _ = self.model(
+                all_label_data, branch="supervised"
+            )
+            record_dict.update(record_all_label_data)
+            record_all_unlabel_data, _, _, _ = self.model(
+                all_unlabel_data, branch="supervised"
+            )
+            new_record_all_unlabel_data = {}
+            for key in record_all_unlabel_data.keys():
+                new_record_all_unlabel_data[key + "_pseudo"] = record_all_unlabel_data[
+                    key
+                ]
+            record_dict.update(new_record_all_unlabel_data)
+
+            loss_dict = {}
+            for key in record_dict.keys():
+                if key[:4] == "loss":
+                    if key == "loss_rpn_loc_pseudo" or key == "loss_box_reg_pseudo":
+                        # pseudo bbox regression <- 0
+                        loss_dict[key] = record_dict[key] * 0
+                    elif key[-6:] == "pseudo":  # unsupervised loss
+                        loss_dict[key] = (
+                                record_dict[key] *
+                                self.cfg.KD.LOSS_WEIGHT
+                        )
+                    else:  # supervised loss
+                        loss_dict[key] = record_dict[key] * 1
+
+            losses += sum(loss_dict.values())
 
         metrics_dict = record_dict
         metrics_dict["data_time"] = data_time
@@ -360,8 +372,6 @@ class KdTrainer(DefaultTrainer):
         self.optimizer.zero_grad()
         losses.backward()
         self.optimizer.step()
-        
-
 
     def _write_metrics(self, metrics_dict: dict):
         metrics_dict = {
@@ -380,7 +390,7 @@ class KdTrainer(DefaultTrainer):
                 # data_time among workers can have high variance. The actual latency
                 # caused by data_time is the maximum among workers.
                 data_time = np.max([x.pop("data_time")
-                                   for x in all_metrics_dict])
+                                    for x in all_metrics_dict])
                 self.storage.put_scalar("data_time", data_time)
 
             # average the rest metrics
@@ -414,8 +424,8 @@ class KdTrainer(DefaultTrainer):
         for key, value in self.model_teacher.state_dict().items():
             if key in student_model_dict.keys():
                 new_teacher_dict[key] = (
-                    student_model_dict[key] *
-                    (1 - keep_rate) + value * keep_rate
+                        student_model_dict[key] *
+                        (1 - keep_rate) + value * keep_rate
                 )
             else:
                 raise Exception("{} is not found in student model".format(key))
@@ -487,11 +497,16 @@ class KdTrainer(DefaultTrainer):
             return self._last_eval_results_teacher
 
         ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
-                   test_and_save_results_student))
+                                  test_and_save_results_student))
         ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
-                   test_and_save_results_teacher))
+                                  test_and_save_results_teacher))
 
         if comm.is_main_process():
             # run writers in the end, so that evaluation metrics are written
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
         return ret
+
+    def build_hooks(self):
+        hooks = super().build_hooks()
+        hooks.append(WandbHook(log_period=20))
+        return hooks

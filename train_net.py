@@ -1,4 +1,7 @@
+import os
+
 import detectron2.utils.comm as comm
+import wandb
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
 from detectron2.engine import default_argument_parser, default_setup, launch
@@ -30,6 +33,14 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
+
+    repeat_id = os.getenv("REPEAT_ID", 2026)
+    wandb.init(
+        project="ICIP 2026",
+        name=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}_rep{repeat_id}",
+        group=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}",
+        config=cfg
+    )
     
     Trainer = KdTrainer
   
