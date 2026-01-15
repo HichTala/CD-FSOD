@@ -45,6 +45,7 @@ do
 	for shot in  1 5 10
 	do
 	  REPEAT_ID=${repeat_id} \
+	  DATASET=${dataset} \
 		srun python train_net.py --num-gpus 8  --config-file ./configs/${dataset}/${shot}_shot.yaml 2>&1 | tee log/${dataset}/${shot}_shot.log
 
 	done

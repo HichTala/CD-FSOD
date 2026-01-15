@@ -41,16 +41,17 @@ def hf_to_detectron2(dataset):
 
 def register_hf_data():
     seed = os.getenv("REPEAT_ID", 2026)
+    dataset_name = os.getenv("REPEAT_ID", 2026)
 
-    dataset = load_fs_dataset("/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/dota")
+    dataset = load_fs_dataset(f"/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/{dataset_name}")
     classes = dataset["train"].features["objects"]["category"].feature.names
 
     records_test = hf_to_detectron2(dataset["test"])
-    DatasetCatalog.register("dota_test", lambda: records_test)
-    MetadataCatalog.get("dota_test").set(thing_classes=classes)
+    DatasetCatalog.register(f"{dataset_name}_test", lambda: records_test)
+    MetadataCatalog.get(f"{dataset_name}_test").set(thing_classes=classes)
 
     for shot in [1, 5, 10]:
-        name = "dota_{}shot".format(shot)
+        name = f"{dataset_name}_{shot}shot"
         dataset["train"].sampling(shots=shot, seed=int(seed))
         records = hf_to_detectron2(dataset["train"])
         DatasetCatalog.register(name, lambda: records)
