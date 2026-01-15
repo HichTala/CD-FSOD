@@ -27,7 +27,7 @@
 #SBATCH --qos=qos_gpu-t4
 
 module purge # purge modules inherited by default
-module load pytorch-gpu/py3/2.8.0 # load modules
+module load pytorch-gpu/py3/1.10.1 # load modules
 
 export PYTHONUSERBASE=$WORK/.local
 export WANDB_MODE=offline
