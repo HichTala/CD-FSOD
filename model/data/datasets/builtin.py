@@ -41,7 +41,7 @@ def hf_to_detectron2(dataset):
 
 def register_hf_data():
     seed = os.getenv("REPEAT_ID", 2026)
-    dataset_name = os.getenv("REPEAT_ID", 2026)
+    dataset_name = os.getenv("DATASET")
 
     dataset = load_fs_dataset(f"/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/{dataset_name}")
     classes = dataset["train"].features["objects"]["category"].feature.names
