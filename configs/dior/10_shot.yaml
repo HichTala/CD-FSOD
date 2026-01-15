@@ -29,4 +29,4 @@ KD:
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
-OUTPUT_DIR: "checkpoints/DIOR/10shot"
+OUTPUT_DIR: "checkpoints/dior/10shot"

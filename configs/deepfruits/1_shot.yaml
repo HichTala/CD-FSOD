@@ -16,17 +16,17 @@ MODEL:
     LOSS: "FocalLoss"
 SOLVER:
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
-  STEPS: (3000, )
-  MAX_ITER: 3500
+  STEPS: (2000, )
+  MAX_ITER: 2500
   IMG_PER_BATCH_LABEL: 16
   BASE_LR: 0.01
 DATASETS:
-  TRAIN: ('ArTaxOr_10shot',)
-  TEST: ('ArTaxOr_test',)
+  TRAIN: ('deepfruits_1shot',)
+  TEST: ('deepfruits_test',)
 KD:
-  BURN_UP_STEP: 1500
+  BURN_UP_STEP: 1000
   BBOX_THRESHOLD: 0.7
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
-OUTPUT_DIR: "checkpoints/ArTaxOr/10shot"
+OUTPUT_DIR: "checkpoints/deepfruits/1shot"

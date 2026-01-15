@@ -11,22 +11,22 @@ MODEL:
     POSITIVE_FRACTION: 0.25
     LOSS: "CrossEntropy"
   ROI_HEADS:
-    NUM_CLASSES: 20
+    NUM_CLASSES: 14
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
-  STEPS: (3000, )
-  MAX_ITER: 4000
+  STEPS: (4000, )
+  MAX_ITER: 5000
   IMG_PER_BATCH_LABEL: 16
   BASE_LR: 0.01
 DATASETS:
-  TRAIN: ('dior_1shot',)
-  TEST: ('dior_test',)
+  TRAIN: ('cadot_5shot',)
+  TEST: ('cadot_test',)
 KD:
-  BURN_UP_STEP: 1000
+  BURN_UP_STEP: 2000
   BBOX_THRESHOLD: 0.7
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
-OUTPUT_DIR: "checkpoints/DIOR/1shot"
+OUTPUT_DIR: "checkpoints/cadot/5shot"

@@ -11,7 +11,7 @@ MODEL:
     POSITIVE_FRACTION: 0.25
     LOSS: "CrossEntropy"
   ROI_HEADS:
-    NUM_CLASSES: 7
+    NUM_CLASSES: 15
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
@@ -21,12 +21,12 @@ SOLVER:
   IMG_PER_BATCH_LABEL: 16
   BASE_LR: 0.01
 DATASETS:
-  TRAIN: ('ArTaxOr_5shot',)
-  TEST: ('ArTaxOr_test',)
+  TRAIN: ('oktoberfest_5shot',)
+  TEST: ('oktoberfest_test',)
 KD:
   BURN_UP_STEP: 1500
   BBOX_THRESHOLD: 0.7
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
-OUTPUT_DIR: "checkpoints/ArTaxOr/5shot"
+OUTPUT_DIR: "checkpoints/oktoberfest/5shot"
