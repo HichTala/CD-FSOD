@@ -1,5 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=v100-10pretrain        # name of job
+
+dataset=$1
+
+#SBATCH --job-name=${dataset}        # name of job
 #SBATCH -A mvq@v100
 # Other partitions are usable by activating/uncommenting
 # one of the 5 following directives:
@@ -37,7 +40,6 @@ export HF_DATASETS_OFFLINE=1
 
 set -x # activate echo of launched commands
 
-dataset=$1
 
 
 for repeat_id in 0 1 2 3 4 5 6 7 8 9
