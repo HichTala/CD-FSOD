@@ -27,7 +27,7 @@ from model.data.build import (
     build_detection_semisup_train_loader,
     build_detection_test_loader,
 )
-from model.data.dataset_mapper import DatasetMapperTwoCropSeparate
+from model.data.dataset_mapper import DatasetMapperTwoCropSeparate, DatasetMapperHuggingFace
 from model.engine.hooks import LossEvalHook
 
 from model.solver.build import build_lr_scheduler
@@ -445,7 +445,8 @@ class KdTrainer(DefaultTrainer):
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
-        return build_detection_test_loader(cfg, dataset_name)
+        mapper = DatasetMapperHuggingFace(cfg, False)
+        return build_detection_test_loader(cfg, dataset_name, mapper)
 
     def build_hooks(self):
         cfg = self.cfg.clone()
