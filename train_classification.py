@@ -203,8 +203,6 @@ def main(cfg, dataset_name):
 
     criterion = nn.CrossEntropyLoss()
 
-    wandb.init(project="training-with-background")
-
     train_model(model, dataloaders, criterion, optimizer, num_epochs=150, output_dir=dataset_name)
 
 
@@ -239,5 +237,7 @@ if __name__ == '__main__':
             cfg.merge_from_file(f"./configs/{args.dataset}/{shot}_shot.yaml")
             cfg.merge_from_list([])
             cfg.freeze()
+
+            wandb.init(project=f"ICIP-2026_{args.dataset}", group=f"{shot}_shots")
 
             main(cfg, f"/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/crop_datasets/{args.dataset}_{shot}shot_{seed}")

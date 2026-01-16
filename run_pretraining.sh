@@ -39,4 +39,4 @@ set -x # activate echo of launched commands
 
 dataset=$1
 
-srun python train_classification.py ${dataset}
+DATASET=${dataset} srun python train_classification.py ${dataset}
