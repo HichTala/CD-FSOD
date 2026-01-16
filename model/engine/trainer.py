@@ -47,6 +47,15 @@ class WandbHook(HookBase):
             log_dict["iter"] = self.trainer.iter
             wandb.log(log_dict)
 
+    def after_train(self):
+        metrics = self.trainer.storage.latest()
+        log_dict = {
+            k: v[0] for k, v in metrics.items()
+            if isinstance(v, tuple)
+        }
+        log_dict["iter"] = self.trainer.iter
+        wandb.log(log_dict)
+
 
 class KdTrainer(DefaultTrainer):
     def __init__(self, cfg):
@@ -505,9 +514,12 @@ class KdTrainer(DefaultTrainer):
         if comm.is_main_process():
             # run writers in the end, so that evaluation metrics are written
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
+            repeat_id = os.getenv("REPEAT_ID", 2026)
+            wandb.init(
+                project="ICIP 2026",
+                name=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}_rep{repeat_id}",
+                group=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}",
+                config=cfg
+            )
+            ret.append(WandbHook(log_period=20))
         return ret
-
-    def build_hooks(self):
-        hooks = super().build_hooks()
-        hooks.append(WandbHook(log_period=20))
-        return hooks

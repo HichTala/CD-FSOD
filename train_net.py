@@ -34,19 +34,9 @@ def setup(args):
 def main(args):
     cfg = setup(args)
 
-    repeat_id = os.getenv("REPEAT_ID", 2026)
-    wandb.init(
-        project="ICIP 2026",
-        name=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}_rep{repeat_id}",
-        group=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}",
-        config=cfg
-    )
-    
     Trainer = KdTrainer
-  
 
     if args.eval_only:
-   
         model = Trainer.build_model(cfg)
         model_teacher = Trainer.build_model(cfg)
         ensem_ts_model = EnsembleTSModel(model_teacher, model)
@@ -56,7 +46,6 @@ def main(args):
         ).resume_or_load(cfg.MODEL.WEIGHTS, resume=args.resume)
         res = Trainer.test(cfg, ensem_ts_model.modelTeacher)
 
-      
         return res
 
     trainer = Trainer(cfg)
