@@ -7,29 +7,17 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 import torchvision
-from detectron2.config import get_cfg
-from torchvision.models import ResNet50_Weights
 
-import wandb
 from datasets import load_dataset
-from torchvision import datasets, models, transforms
-import matplotlib.pyplot as plt
+from torchvision import transforms
 import time
-import os
 import copy
 
-from model import add_kd_config
-from model.engine.trainer import KdTrainer
-
 import os
 
-import detectron2.utils.comm as comm
 import wandb
-from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.engine import default_argument_parser, default_setup, launch
 
 from model import add_kd_config
 from model.engine.trainer import KdTrainer
