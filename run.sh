@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=v100-10pretrain        # name of job
+#SBATCH --job-name=train        # name of job
 #SBATCH -A mvq@v100
 # Other partitions are usable by activating/uncommenting
 # one of the 5 following directives:
