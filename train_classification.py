@@ -185,7 +185,7 @@ def main(cfg, dataset_name, shot, seed):
     # dataset["validation"].set_transform(partial(transforms_fn, split="validation"))
 
     dataloaders = {
-        split_name: torch.utils.data.DataLoader(dataset[split_name], batch_size=256, shuffle=True, num_workers=4,
+        split_name: torch.utils.data.DataLoader(dataset[split_name], batch_size=256, shuffle=True, num_workers=3,
                                                 collate_fn=collate_fn)
         for split_name in ['train']
     }
