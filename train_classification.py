@@ -151,8 +151,9 @@ def transforms_fn(example_batch, split):
     return example_batch
 
 
-def main(cfg, dataset_name):
-    dataset = load_dataset(dataset_name)
+def main(cfg, dataset_name, shot, seed):
+    dataset_path = f"/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/crop_datasets/{dataset_name}_{shot}shot_{seed}"
+    dataset = load_dataset(dataset_path)
     num_classes = len(dataset["train"].features["label"].names)
 
     Trainer = KdTrainer
@@ -228,4 +229,4 @@ if __name__ == '__main__':
 
             wandb.init(project=f"ICIP-2026_{args.dataset}", group=f"{shot}_shots")
 
-            main(cfg, f"/lustre/fsn1/projects/rech/mvq/ubc18yy/datasets/crop_datasets/{args.dataset}_{shot}shot_{seed}")
+            main(cfg, dataset_name=args.dataset, shot=shot, seed=seed)
