@@ -198,6 +198,8 @@ def main(cfg, dataset_name, shot, seed):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', required=True, help='dataset to use for training')
+    parser.add_argument('--shot', required=True, help='dataset to use for training')
+    parser.add_argument('--seed', required=True, help='dataset to use for training')
     args = parser.parse_args()
 
     input_size = 224
@@ -217,16 +219,12 @@ if __name__ == '__main__':
         ]),
     }
 
-    seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-    shots = [1, 5, 10]
-    for shot in shots:
-        for seed in seeds:
-            cfg = get_cfg()
-            add_kd_config(cfg)
-            cfg.merge_from_file(f"./configs/{args.dataset}/{shot}_shot.yaml")
-            cfg.merge_from_list([])
-            cfg.freeze()
+    cfg = get_cfg()
+    add_kd_config(cfg)
+    cfg.merge_from_file(f"./configs/{args.dataset}/{args.shot}_shot.yaml")
+    cfg.merge_from_list([])
+    cfg.freeze()
 
-            wandb.init(project=f"ICIP-2026_{args.dataset}", group=f"{shot}_shots")
+    wandb.init(project=f"ICIP-2026_{args.dataset}", group=f"{args.shot}_shots")
 
-            main(cfg, dataset_name=args.dataset, shot=shot, seed=seed)
+    main(cfg, dataset_name=args.dataset, shot=args.shot, seed=args.seed)

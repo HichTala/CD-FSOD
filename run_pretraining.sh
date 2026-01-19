@@ -1,5 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=pretrain        # name of job
 #SBATCH -A mvq@v100
 # Other partitions are usable by activating/uncommenting
 # one of the 5 following directives:
@@ -39,4 +38,11 @@ set -x # activate echo of launched commands
 
 dataset=$1
 
-DATASET=${dataset} srun python train_classification.py --dataset ${dataset}
+for repeat_id in 0 1 2 3 4 5 6 7 8 9
+do
+	for shot in  1 5 10
+	do
+	  DATASET=${dataset} \
+		srun python train_classification.py --dataset ${dataset} --shot ${shot} --seed ${repeat_id}
+	done
+done
