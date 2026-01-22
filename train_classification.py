@@ -192,7 +192,7 @@ def main(cfg, dataset_name, shot, seed):
 
     criterion = nn.CrossEntropyLoss()
 
-    train_model(model, dataloaders, criterion, optimizer, num_epochs=150, output_dir=dataset_name)
+    train_model(model, dataloaders, criterion, optimizer, num_epochs=150, output_dir=f"{dataset_name}_{shot}shot_{seed}")
 
 
 if __name__ == '__main__':
