@@ -21,12 +21,12 @@ SOLVER:
   IMG_PER_BATCH_LABEL: 16
   BASE_LR: 0.01
 DATASETS:
-  TRAIN: ('artaxor_5shot',)
-  TEST: ('artaxor_test',)
+  TRAIN: ('deepfruits_5shot',)
+  TEST: ('deepfruits_test',)
 KD:
   BURN_UP_STEP: 1500
   BBOX_THRESHOLD: 0.7
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
-OUTPUT_DIR: "checkpoints/artaxor/5shot"
+OUTPUT_DIR: "checkpoints/deepfruits/5shot"
