@@ -28,7 +28,7 @@ def setup(args):
     cfg.merge_from_list(args.opts)
     seed = os.getenv("REPEAT_ID", 2026)
     output_dir = cfg.OUTPUT_DIR
-    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, seed)])
+    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed))])
     cfg.freeze()
     default_setup(cfg, args)
     return cfg
