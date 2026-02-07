@@ -28,7 +28,7 @@ def setup(args):
     cfg.merge_from_list(args.opts)
     seed = os.getenv("REPEAT_ID", 2026)
     output_dir = cfg.OUTPUT_DIR
-    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed)), 'MODEL.WEIGHTS', os.path.join('runs', str(seed), "model_final.pth")])
+    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed)), 'MODEL.WEIGHTS', os.path.join('runs', f"{cfg.DATASETS.TRAIN}_{str(seed)}", "model_final.pth")])
     cfg.freeze()
     default_setup(cfg, args)
     return cfg
