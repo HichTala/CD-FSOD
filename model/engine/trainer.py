@@ -515,8 +515,9 @@ class KdTrainer(DefaultTrainer):
             # run writers in the end, so that evaluation metrics are written
             ret.append(hooks.PeriodicWriter(self.build_writers(), period=20))
             repeat_id = os.getenv("REPEAT_ID", 2026)
+            project = os.getenv("PROJECT", "ICIP 2026")
             wandb.init(
-                project="ICIP 2026",
+                project=project,
                 name=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}_rep{repeat_id}",
                 group=f"{cfg.DATASETS.TRAIN[0]}_{cfg.SOLVER.MAX_ITER}",
                 config=cfg
