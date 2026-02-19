@@ -35,4 +35,6 @@ def add_kd_config(cfg):
 
     _C.EMAMODEL = CN()
     _C.EMAMODEL.SUP_CONSIST = True
+
+    _C.DATASETS.VAL = ()
     

@@ -4,6 +4,7 @@ import time
 import logging
 import torch
 import wandb
+from detectron2.evaluation.testing import flatten_results_dict
 from torch.nn.parallel import DistributedDataParallel
 from fvcore.nn.precise_bn import get_bn_modules
 import numpy as np
@@ -14,7 +15,8 @@ from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.engine import DefaultTrainer, SimpleTrainer, TrainerBase
 from detectron2.engine.train_loop import AMPTrainer, HookBase
 from detectron2.utils.events import EventStorage
-from detectron2.evaluation import COCOEvaluator, verify_results, PascalVOCDetectionEvaluator, DatasetEvaluators
+from detectron2.evaluation import COCOEvaluator, verify_results, PascalVOCDetectionEvaluator, DatasetEvaluators, \
+    DatasetEvaluator, inference_on_dataset, print_csv_format
 from detectron2.data.dataset_mapper import DatasetMapper
 from detectron2.engine import hooks
 from detectron2.structures.boxes import Boxes
@@ -50,7 +52,7 @@ class WandbHook(HookBase):
     def after_train(self):
         metrics = self.trainer.storage.latest()
         log_dict = {
-            k: v[0] for k, v in metrics.items()
+            f"test_{k}": v[0] for k, v in metrics.items()
             if isinstance(v, tuple)
         }
         log_dict["iter"] = self.trainer.iter
@@ -493,17 +495,17 @@ class KdTrainer(DefaultTrainer):
                 )
             )
 
-        def test_and_save_results_student():
-            self._last_eval_results_student = self.test(self.cfg, self.model)
+        def test_and_save_results_student(validation=True):
+            self._last_eval_results_student = self.test(self.cfg, self.model, validation=validation)
             _last_eval_results_student = {
                 k + "_student": self._last_eval_results_student[k]
                 for k in self._last_eval_results_student.keys()
             }
             return _last_eval_results_student
 
-        def test_and_save_results_teacher():
+        def test_and_save_results_teacher(validation=True):
             self._last_eval_results_teacher = self.test(
-                self.cfg, self.model_teacher)
+                self.cfg, self.model_teacher, validation=validation)
             return self._last_eval_results_teacher
 
         ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
@@ -524,3 +526,131 @@ class KdTrainer(DefaultTrainer):
             )
             ret.append(WandbHook(log_period=20))
         return ret
+
+    @classmethod
+    def test(cls, cfg, model, evaluators=None, validation=True):
+        """
+        Evaluate the given model. The given model is expected to already contain
+        weights to evaluate.
+
+        Args:
+            cfg (CfgNode):
+            model (nn.Module):
+            evaluators (list[DatasetEvaluator] or None): if None, will call
+                :meth:`build_evaluator`. Otherwise, must have the same length as
+                ``cfg.DATASETS.TEST``.
+
+        Returns:
+            dict: a dict of result metrics
+        """
+        logger = logging.getLogger(__name__)
+        if isinstance(evaluators, DatasetEvaluator):
+            evaluators = [evaluators]
+        if evaluators is not None:
+            assert len(cfg.DATASETS.TEST) == len(evaluators), "{} != {}".format(
+                len(cfg.DATASETS.TEST), len(evaluators)
+            )
+            if 'VAL' in cfg.DATASETS:
+                assert len(cfg.DATASETS.VAL) == len(evaluators), "{} != {}".format(
+                    len(cfg.DATASETS.VAL), len(evaluators)
+                )
+            else:
+                validation = False
+
+        if validation:
+            dataset = cfg.DATASETS.VAL
+        else:
+            dataset = cfg.DATASETS.TEST
+
+        results = OrderedDict()
+        for idx, dataset_name in enumerate(dataset):
+            data_loader = cls.build_test_loader(cfg, dataset_name)
+            # When evaluators are passed in as arguments,
+            # implicitly assume that evaluators can be created before data_loader.
+            if evaluators is not None:
+                evaluator = evaluators[idx]
+            else:
+                try:
+                    evaluator = cls.build_evaluator(cfg, dataset_name)
+                except NotImplementedError:
+                    logger.warn(
+                        "No evaluator found. Use `DefaultTrainer.test(evaluators=)`, "
+                        "or implement its `build_evaluator` method."
+                    )
+                    results[dataset_name] = {}
+                    continue
+            results_i = inference_on_dataset(model, data_loader, evaluator)
+            results[dataset_name] = results_i
+            if comm.is_main_process():
+                assert isinstance(
+                    results_i, dict
+                ), "Evaluator must return a dict on the main process. Got {} instead.".format(
+                    results_i
+                )
+                logger.info("Evaluation results for {} in csv format:".format(dataset_name))
+                print_csv_format(results_i)
+
+        if len(results) == 1:
+            results = list(results.values())[0]
+        return results
+
+class CustomEvalHook(HookBase):
+    """
+    Run an evaluation function periodically, and at the end of training.
+
+    It is executed every ``eval_period`` iterations and after the last iteration.
+    """
+
+    def __init__(self, eval_period, eval_function):
+        """
+        Args:
+            eval_period (int): the period to run `eval_function`. Set to 0 to
+                not evaluate periodically (but still after the last iteration).
+            eval_function (callable): a function which takes no arguments, and
+                returns a nested dict of evaluation metrics.
+
+        Note:
+            This hook must be enabled in all or none workers.
+            If you would like only certain workers to perform evaluation,
+            give other workers a no-op function (`eval_function=lambda: None`).
+        """
+        self._period = eval_period
+        self._func = eval_function
+
+    def _do_eval(self, validation=True):
+        results = self._func(validation=validation)
+
+        if results:
+            assert isinstance(
+                results, dict
+            ), "Eval function must return a dict. Got {} instead.".format(results)
+
+            flattened_results = flatten_results_dict(results)
+            for k, v in flattened_results.items():
+                try:
+                    v = float(v)
+                except Exception as e:
+                    raise ValueError(
+                        "[EvalHook] eval_function should return a nested dict of float. "
+                        "Got '{}: {}' instead.".format(k, v)
+                    ) from e
+            self.trainer.storage.put_scalars(**flattened_results, smoothing_hint=False)
+
+        # Evaluation may take different time among workers.
+        # A barrier make them start the next iteration together.
+        comm.synchronize()
+
+    def after_step(self):
+        next_iter = self.trainer.iter + 1
+        if self._period > 0 and next_iter % self._period == 0:
+            # do the last eval in after_train
+            if next_iter != self.trainer.max_iter:
+                self._do_eval()
+
+    def after_train(self):
+        # This condition is to prevent the eval from running after a failed training
+        if self.trainer.iter + 1 >= self.trainer.max_iter:
+            self._do_eval(validation=False)
+        # func is likely a closure that holds reference to the trainer
+        # therefore we clean it to avoid circular reference in the end
+        del self._func

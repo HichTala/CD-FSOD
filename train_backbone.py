@@ -1,6 +1,8 @@
 import os
 
 import detectron2.utils.comm as comm
+from torch import manual_seed
+
 import wandb
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
@@ -16,6 +18,7 @@ from model.modeling.roi_heads.roi_heads import StandardROIHeadsPseudoLab
 import model.data.datasets.builtin
 
 from model.modeling.meta_arch.ts_ensemble import EnsembleTSModel
+from train_net import main
 
 
 def setup(args):
@@ -27,34 +30,13 @@ def setup(args):
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     seed = os.getenv("REPEAT_ID", 2026)
+    manual_seed(seed)
     output_dir = cfg.OUTPUT_DIR
-    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed)), 'MODEL.WEIGHTS', os.path.join('runs', f"{cfg.DATASETS.TRAIN[0]}_{str(seed)}", "model_final.pth")])
+    cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed)), 'MODEL.WEIGHTS',
+                         os.path.join('runs', f"{cfg.DATASETS.TRAIN[0]}_{str(seed)}", "model_final.pth")])
     cfg.freeze()
     default_setup(cfg, args)
     return cfg
-
-
-def main(args):
-    cfg = setup(args)
-
-    Trainer = KdTrainer
-
-    if args.eval_only:
-        model = Trainer.build_model(cfg)
-        model_teacher = Trainer.build_model(cfg)
-        ensem_ts_model = EnsembleTSModel(model_teacher, model)
-
-        DetectionCheckpointer(
-            ensem_ts_model, save_dir=cfg.OUTPUT_DIR
-        ).resume_or_load(cfg.MODEL.WEIGHTS, resume=args.resume)
-        res = Trainer.test(cfg, ensem_ts_model.modelTeacher)
-
-        return res
-
-    trainer = Trainer(cfg)
-    trainer.resume_or_load(resume=args.resume)
-
-    return trainer.train()
 
 
 if __name__ == "__main__":

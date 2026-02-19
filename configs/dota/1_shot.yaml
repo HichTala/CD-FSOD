@@ -18,14 +18,16 @@ MODEL:
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
+  IMS_PER_BATCH: 4
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
   STEPS: (6000, 8000)  # EXTENDED
   MAX_ITER: 10000  # INCREASED
-  IMG_PER_BATCH_LABEL: 8  # REDUCED
-  BASE_LR: 0.001  # REDUCED significantly
+  IMG_PER_BATCH_LABEL: 4  # REDUCED
+  BASE_LR: 0.0005  # REDUCED significantly
   WEIGHT_DECAY: 0.0001
 DATASETS:
   TRAIN: ('dota_1shot',)
+  VAL: ('dota_val',)
   TEST: ('dota_test',)
 KD:
   BURN_UP_STEP: 3000  # INCREASED: Let student learn from data first
@@ -39,3 +41,5 @@ INPUT:
   MIN_SIZE_TEST: 800
   MAX_SIZE_TEST: 1333
 OUTPUT_DIR: "checkpoints/dota/1shot"
+TEST:
+  EVAL_PERIOD: 2000

@@ -1,6 +1,8 @@
 import os
 
 import detectron2.utils.comm as comm
+from torch import manual_seed
+
 import wandb
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
@@ -27,6 +29,7 @@ def setup(args):
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     seed = os.getenv("REPEAT_ID", 2026)
+    manual_seed(seed)
     output_dir = cfg.OUTPUT_DIR
     cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed))])
     cfg.freeze()

@@ -46,7 +46,7 @@ do
 	do
 	  REPEAT_ID=${repeat_id} \
 	  DATASET=${dataset} \
-	  PROJECT="ICIP backbone 2026" \
+	  PROJECT="ICIP cdfsod backbone 2026" \
 		srun python train_backbone.py --num-gpus 8  --config-file ./configs/${dataset}/${shot}_shot.yaml 2>&1 | tee log/${dataset}/${shot}_shot.log
 
 	done
