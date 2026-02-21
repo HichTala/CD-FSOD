@@ -1,3 +1,4 @@
+import copy
 import os
 import tempfile
 
@@ -91,6 +92,7 @@ def register_hf_data():
     dataset_name = os.getenv("DATASET")
 
     dataset = load_fs_dataset(f"HichTala/{dataset_name}")
+    og_dataset = copy.deepcopy(dataset["train"])
     classes = dataset["train"].features["objects"]["category"].feature.names
 
     id2label = dict(enumerate(classes))
@@ -116,6 +118,7 @@ def register_hf_data():
         records = hf_to_detectron2(dataset["train"])
         DatasetCatalog.register(name, lambda: records)
         MetadataCatalog.get(name).set(thing_classes=classes)
+        dataset["train"] = copy.deepcopy(og_dataset)
 
 
 _root = os.getenv("DETECTRON2_DATASETS", "datasets")
