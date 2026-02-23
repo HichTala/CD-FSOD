@@ -39,6 +39,29 @@ def setup(args):
     return cfg
 
 
+def main(args):
+    cfg = setup(args)
+
+    Trainer = KdTrainer
+
+    if args.eval_only:
+        model = Trainer.build_model(cfg)
+        model_teacher = Trainer.build_model(cfg)
+        ensem_ts_model = EnsembleTSModel(model_teacher, model)
+
+        DetectionCheckpointer(
+            ensem_ts_model, save_dir=cfg.OUTPUT_DIR
+        ).resume_or_load(cfg.MODEL.WEIGHTS, resume=args.resume)
+        res = Trainer.test(cfg, ensem_ts_model.modelTeacher)
+
+        return res
+
+    trainer = Trainer(cfg)
+    trainer.resume_or_load(resume=args.resume)
+
+    return trainer.train()
+
+
 if __name__ == "__main__":
     args = default_argument_parser().parse_args()
 
