@@ -104,6 +104,7 @@ def register_hf_data():
     register_coco_instances(f"{dataset_name}_test", {}, coco_path, image_root=".")
     DatasetCatalog.register(f"{dataset_name}_test_images", lambda: images_dict)
     MetadataCatalog.get(f"{dataset_name}_test").set(thing_classes=classes, evaluator_type="coco")
+    del coco_dict, images_dict
 
     coco_dict, images_dict = hf_to_coco_dict(dataset["validation"], categories=categories)
     coco_path = write_temp_coco(coco_dict)
@@ -111,6 +112,7 @@ def register_hf_data():
     register_coco_instances(f"{dataset_name}_val", {}, coco_path, image_root=".")
     DatasetCatalog.register(f"{dataset_name}_val_images", lambda: images_dict)
     MetadataCatalog.get(f"{dataset_name}_val").set(thing_classes=classes, evaluator_type="coco")
+    del coco_dict, images_dict
 
     for shot in [1, 5, 10]:
         name = f"{dataset_name}_{shot}shot"
