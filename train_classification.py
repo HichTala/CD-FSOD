@@ -139,12 +139,11 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
     print('Best val Acc: {:4f}'.format(best_acc))
     print()
-    print('Test Acc: {:4f}'.format(best_acc))
     # load best model weights
     model.load_state_dict(best_model_wts)
     torch.save(best_model_wts, os.path.join("runs", 'best_model.pth'))
     print('Testing')
-    best_acc = training_step('test', model, dataloaders, optimizer, is_inception, criterion, best_acc, output_dir, epoch, val_acc_history)
+    training_step('test', model, dataloaders, optimizer, is_inception, criterion, best_acc, best_model_wts, output_dir, epoch, val_acc_history)
     return model, val_acc_history
 
 
@@ -188,7 +187,7 @@ def main(cfg, dataset_name, shot, seed):
             print("\t", name)
 
     # Observe that all parameters are being optimized
-    optimizer = optim.SGD(params_to_update, lr=0.0001, momentum=0.9)
+    optimizer = optim.SGD(params_to_update, lr=0.00025, momentum=0.9)
 
     print("Initializing Datasets and Dataloaders...")
 
@@ -204,7 +203,7 @@ def main(cfg, dataset_name, shot, seed):
 
     criterion = nn.CrossEntropyLoss()
 
-    train_model(model, dataloaders, criterion, optimizer, num_epochs=30,
+    train_model(model, dataloaders, criterion, optimizer, num_epochs=20,
                 output_dir=f"{dataset_name}_{shot}shot_{seed}")
 
 
