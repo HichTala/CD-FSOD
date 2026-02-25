@@ -455,8 +455,8 @@ class KdTrainer(DefaultTrainer):
             self.model_teacher.load_state_dict(self.model.state_dict())
 
     @classmethod
-    def build_test_loader(cls, cfg, dataset_name):
-        mapper = DatasetMapperHuggingFace(cfg, False)
+    def build_test_loader(cls, cfg, dataset_name, is_validation=False):
+        mapper = DatasetMapperHuggingFace(cfg, False, is_validation)
         return build_detection_test_loader(cfg, dataset_name, mapper)
 
     def build_hooks(self):
@@ -508,9 +508,9 @@ class KdTrainer(DefaultTrainer):
                 self.cfg, self.model_teacher, validation=validation)
             return self._last_eval_results_teacher
 
-        ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
+        ret.append(CustomEvalHook(cfg.TEST.EVAL_PERIOD,
                                   test_and_save_results_student))
-        ret.append(hooks.EvalHook(cfg.TEST.EVAL_PERIOD,
+        ret.append(CustomEvalHook(cfg.TEST.EVAL_PERIOD,
                                   test_and_save_results_teacher))
 
         if comm.is_main_process():
@@ -564,7 +564,7 @@ class KdTrainer(DefaultTrainer):
 
         results = OrderedDict()
         for idx, dataset_name in enumerate(dataset):
-            data_loader = cls.build_test_loader(cfg, dataset_name)
+            data_loader = cls.build_test_loader(cfg, dataset_name, validation)
             # When evaluators are passed in as arguments,
             # implicitly assume that evaluators can be created before data_loader.
             if evaluators is not None:

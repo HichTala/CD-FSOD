@@ -159,9 +159,12 @@ class DatasetMapperTwoCropSeparate(DatasetMapper):
         return (dataset_dict, dataset_dict_key)
 
 class DatasetMapperHuggingFace(DatasetMapper):
-    def __init__(self, cfg, is_train=True):
+    def __init__(self, cfg, is_train=True, is_validation=False):
         super().__init__(cfg, is_train)
-        self.image_dict = DatasetCatalog.get(cfg.DATASETS.TEST[0] + "_images")
+        if is_validation:
+            self.image_dict = DatasetCatalog.get(cfg.DATASETS.VAL[0] + "_images")
+        else:
+            self.image_dict = DatasetCatalog.get(cfg.DATASETS.TEST[0] + "_images")
 
     def __call__(self, dataset_dict):
         """
