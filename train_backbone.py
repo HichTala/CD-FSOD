@@ -18,7 +18,6 @@ from model.modeling.roi_heads.roi_heads import StandardROIHeadsPseudoLab
 import model.data.datasets.builtin
 
 from model.modeling.meta_arch.ts_ensemble import EnsembleTSModel
-from train_net import main
 
 
 def setup(args):

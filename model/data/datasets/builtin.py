@@ -98,21 +98,21 @@ def register_hf_data():
     id2label = dict(enumerate(classes))
     categories = [{"id": i, "name": name} for i, name in id2label.items()]
 
-    coco_dict, images_dict = hf_to_coco_dict(dataset["test"], categories=categories)
+    coco_dict, images_dict_test = hf_to_coco_dict(dataset["test"], categories=categories)
     coco_path = write_temp_coco(coco_dict)
 
     register_coco_instances(f"{dataset_name}_test", {}, coco_path, image_root=".")
-    DatasetCatalog.register(f"{dataset_name}_test_images", lambda: images_dict)
+    DatasetCatalog.register(f"{dataset_name}_test_images", lambda: images_dict_test)
     MetadataCatalog.get(f"{dataset_name}_test").set(thing_classes=classes, evaluator_type="coco")
-    del coco_dict, images_dict
+    del coco_dict
 
-    coco_dict, images_dict = hf_to_coco_dict(dataset["validation"], categories=categories)
+    coco_dict, images_dict_val = hf_to_coco_dict(dataset["validation"], categories=categories)
     coco_path = write_temp_coco(coco_dict)
 
     register_coco_instances(f"{dataset_name}_val", {}, coco_path, image_root=".")
-    DatasetCatalog.register(f"{dataset_name}_val_images", lambda: images_dict)
+    DatasetCatalog.register(f"{dataset_name}_val_images", lambda: images_dict_val)
     MetadataCatalog.get(f"{dataset_name}_val").set(thing_classes=classes, evaluator_type="coco")
-    del coco_dict, images_dict
+    del coco_dict
 
     for shot in [1, 5, 10]:
         name = f"{dataset_name}_{shot}shot"
