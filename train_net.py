@@ -1,6 +1,7 @@
 import os
 
 import detectron2.utils.comm as comm
+from detectron2.utils.env import seed_all_rng
 from torch import manual_seed
 
 import wandb
@@ -29,7 +30,8 @@ def setup(args):
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     seed = os.getenv("REPEAT_ID", 2026)
-    manual_seed(seed)
+    manual_seed(int(seed))
+    seed_all_rng(int(seed))
     output_dir = cfg.OUTPUT_DIR
     cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed))])
     cfg.freeze()
