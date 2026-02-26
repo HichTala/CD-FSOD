@@ -1,6 +1,7 @@
 import copy
 import os
 import tempfile
+import json
 
 from detectron2.data import DatasetCatalog
 from detectron2.data import MetadataCatalog
@@ -9,6 +10,7 @@ import json
 from detectron2.data.datasets import register_coco_instances
 from detectron2.structures import BoxMode
 from fsdetection import load_fs_dataset
+
 
 
 def hf_to_detectron2(dataset, split="train"):
@@ -39,8 +41,6 @@ def hf_to_detectron2(dataset, split="train"):
         records.append(record)
 
     return records
-
-import json
 
 def hf_to_coco_dict(dataset, categories):
     coco = {

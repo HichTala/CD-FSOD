@@ -15,18 +15,22 @@ MODEL:
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
+  IMS_PER_BATCH: 4
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
-  STEPS: (3000, )
-  MAX_ITER: 3500
-  IMG_PER_BATCH_LABEL: 16
-  BASE_LR: 0.01
+  STEPS: (4000, )
+  MAX_ITER: 5000
+  IMG_PER_BATCH_LABEL: 4
+  BASE_LR: 0.0025
 DATASETS:
   TRAIN: ('oktoberfest_10shot',)
+  VAL: ('oktoberfest_val',)
   TEST: ('oktoberfest_test',)
 KD:
-  BURN_UP_STEP: 1500
+  BURN_UP_STEP: 2000
   BBOX_THRESHOLD: 0.7
   TEACHER_UPDATE_ITER: 1
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
 OUTPUT_DIR: "checkpoints/oktoberfest/10shot"
+TEST:
+  EVAL_PERIOD: 2000

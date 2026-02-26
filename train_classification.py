@@ -141,7 +141,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     print()
     # load best model weights
     model.load_state_dict(best_model_wts)
-    torch.save(best_model_wts, os.path.join("runs", 'best_model.pth'))
+    torch.save(best_model_wts, os.path.join(f"runs/{output_dir}", 'best_model.pth'))
     print('Testing')
     training_step('test', model, dataloaders, optimizer, is_inception, criterion, best_acc, best_model_wts, output_dir, epoch, val_acc_history)
     return model, val_acc_history
@@ -201,7 +201,7 @@ def main(cfg, dataset_name, shot, seed):
         for split_name in ['train', 'validation', 'test']
     }
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
     train_model(model, dataloaders, criterion, optimizer, num_epochs=20,
                 output_dir=f"{dataset_name}_{shot}shot_{seed}")

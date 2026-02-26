@@ -15,13 +15,15 @@ MODEL:
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
+  IMS_PER_BATCH: 4
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
   STEPS: (3000, )
   MAX_ITER: 3500
-  IMG_PER_BATCH_LABEL: 16
-  BASE_LR: 0.01
+  IMG_PER_BATCH_LABEL: 4
+  BASE_LR: 0.0025
 DATASETS:
   TRAIN: ('artaxor_10shot',)
+  VAL: ('artaxor_val',)
   TEST: ('artaxor_test',)
 KD:
   BURN_UP_STEP: 1500
@@ -30,3 +32,5 @@ KD:
   EMA_KEEP_RATE: 0.9996
   LOSS_WEIGHT: 4.0
 OUTPUT_DIR: "checkpoints/artaxor/10shot"
+TEST:
+  EVAL_PERIOD: 2000

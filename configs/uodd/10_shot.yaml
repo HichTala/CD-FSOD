@@ -1,4 +1,4 @@
-_BASE_: "../../Base-RCNN-FPN.yaml"
+_BASE_: "../Base-RCNN-FPN.yaml"
 MODEL:
   META_ARCHITECTURE: "TwoStagePseudoLabGeneralizedRCNN"
   WEIGHTS: "pretrained/r50.pkl"
@@ -15,13 +15,15 @@ MODEL:
     NAME: "StandardROIHeadsPseudoLab"
     LOSS: "FocalLoss"
 SOLVER:
+  IMS_PER_BATCH: 4
   LR_SCHEDULER_NAME: "WarmupMultiStepLR"
   STEPS: (2000, )
   MAX_ITER: 2500
-  IMG_PER_BATCH_LABEL: 16
-  BASE_LR: 0.01
+  IMG_PER_BATCH_LABEL: 4
+  BASE_LR: 0.0025
 DATASETS:
   TRAIN: ('uodd_10shot',)
+  VAL: ('uodd_val',)
   TEST: ('uodd_test',)
 KD:
   BURN_UP_STEP: 1000
