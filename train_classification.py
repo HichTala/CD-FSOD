@@ -4,12 +4,14 @@ from __future__ import division
 import argparse
 from functools import partial
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
 
 from datasets import load_dataset
+from torch.utils.data import WeightedRandomSampler
 from torchvision import transforms
 import time
 import copy
@@ -143,7 +145,7 @@ def train_model(model, dataloaders, criterion, optimizer, num_epochs=25, is_ince
     model.load_state_dict(best_model_wts)
     torch.save(best_model_wts, os.path.join(f"runs/{output_dir}", 'best_model.pth'))
     print('Testing')
-    training_step('test', model, dataloaders, optimizer, is_inception, criterion, best_acc, best_model_wts, output_dir, epoch, val_acc_history)
+    # training_step('test', model, dataloaders, optimizer, is_inception, criterion, best_acc, best_model_wts, output_dir, epoch, val_acc_history)
     return model, val_acc_history
 
 
@@ -162,7 +164,7 @@ def transforms_fn(example_batch, split):
 
 
 def main(cfg, dataset_name, shot, seed):
-    dataset_path = f"HichTala/{dataset_name}_{shot}shot_{seed}"
+    dataset_path = f"HichTala/{dataset_name}" #_{shot}shot_{seed}"
     dataset = load_dataset(dataset_path)
     num_classes = len(dataset["train"].features["label"].names)
 
@@ -187,31 +189,31 @@ def main(cfg, dataset_name, shot, seed):
             print("\t", name)
 
     # Observe that all parameters are being optimized
-    optimizer = optim.SGD(params_to_update, lr=0.00025, momentum=0.9)
+    optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
 
     print("Initializing Datasets and Dataloaders...")
 
     dataset["train"].set_transform(partial(transforms_fn, split="train"))
     dataset["validation"].set_transform(partial(transforms_fn, split="validation"))
-    dataset["test"].set_transform(partial(transforms_fn, split="test"))
+    # dataset["test"].set_transform(partial(transforms_fn, split="test"))
 
     dataloaders = {
-        split_name: torch.utils.data.DataLoader(dataset[split_name], batch_size=32, shuffle=True, num_workers=3,
+        split_name: torch.utils.data.DataLoader(dataset[split_name], batch_size=256, shuffle=True, num_workers=3,
                                                 collate_fn=collate_fn)
-        for split_name in ['train', 'validation', 'test']
+        for split_name in ['train', 'validation']#, 'test']
     }
 
     criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
 
-    train_model(model, dataloaders, criterion, optimizer, num_epochs=20,
-                output_dir=f"{dataset_name}_{shot}shot_{seed}")
+    train_model(model, dataloaders, criterion, optimizer, num_epochs=150,
+                output_dir=f"{dataset_name}") #_{shot}shot_{seed}")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', required=True, help='dataset to use for training')
-    parser.add_argument('--shot', required=True, help='dataset to use for training')
-    parser.add_argument('--seed', required=True, help='dataset to use for training')
+    parser.add_argument('--shot', required=False, default=None, help='dataset to use for training')
+    parser.add_argument('--seed', required=False, default=None, help='dataset to use for training')
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -241,8 +243,8 @@ if __name__ == '__main__':
 
     cfg = get_cfg()
     add_kd_config(cfg)
-    cfg.merge_from_file(f"./configs/{args.dataset}/{args.shot}_shot.yaml")
-    cfg.merge_from_list([])
+    cfg.merge_from_file(f"./configs/dota/1_shot.yaml")
+    cfg.merge_from_list(["MODEL.ROI_HEADS.NUM_CLASSES", 81])
     cfg.freeze()
 
     wandb.init(project=f"ICIP-2026-cdfsod_{args.dataset}", group=f"{args.shot}_shots")
