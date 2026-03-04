@@ -11,6 +11,7 @@ import torch.optim as optim
 import torchvision
 
 from datasets import load_dataset
+from detectron2.checkpoint import DetectionCheckpointer
 from torch.utils.data import WeightedRandomSampler
 from torchvision import transforms
 import time
@@ -170,6 +171,7 @@ def main(cfg, dataset_name, shot, seed):
 
     Trainer = KdTrainer
     detection_model = Trainer.build_model(cfg)
+    DetectionCheckpointer(detection_model).resume_or_load(cfg.MODEL.WEIGHTS, resume=False)
     model = PreTrainingBackboneForImageClassification(detection_model.backbone)
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, num_classes)
@@ -243,7 +245,7 @@ if __name__ == '__main__':
 
     cfg = get_cfg()
     add_kd_config(cfg)
-    cfg.merge_from_file(f"./configs/dota/1_shot.yaml")
+    cfg.merge_from_file(f"./configs/dota/test.yaml")
     cfg.merge_from_list(["MODEL.ROI_HEADS.NUM_CLASSES", 81])
     cfg.freeze()
 

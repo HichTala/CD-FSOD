@@ -139,4 +139,4 @@ def register_hf_data():
 
 
 _root = os.getenv("DETECTRON2_DATASETS", "datasets")
-register_hf_data()
+# register_hf_data()
