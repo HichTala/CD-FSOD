@@ -162,6 +162,21 @@ class KdTrainer(DefaultTrainer):
         return DatasetEvaluators(evaluator_list)
 
     @classmethod
+    def build_optimizer(cls, cfg, model):
+        backbone_params = []
+        head_params = []
+        for name, param in model.named_parameters():
+            if "backbone" in name:
+                backbone_params.append(param)
+            else:
+                head_params.append(param)
+
+        return torch.optim.SGD([
+            {"params": backbone_params, "lr": cfg.SOLVER.BASE_LR * 0.1},
+            {"params": head_params, "lr": cfg.SOLVER.BASE_LR},
+        ], momentum=0.9, weight_decay=cfg.SOLVER.WEIGHT_DECAY)
+
+    @classmethod
     def build_train_loader(cls, cfg):
         mapper = DatasetMapperTwoCropSeparate(cfg, True)
         return build_detection_semisup_train_loader(cfg, mapper)

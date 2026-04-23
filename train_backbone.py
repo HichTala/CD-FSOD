@@ -34,7 +34,8 @@ def setup(args):
     seed_all_rng(int(seed))
     output_dir = cfg.OUTPUT_DIR
     cfg.merge_from_list(['OUTPUT_DIR', os.path.join(output_dir, str(seed)), 'MODEL.WEIGHTS',
-                         os.path.join('runs', f"{cfg.DATASETS.TRAIN[0]}_{str(seed)}", "model_final.pth")])
+                         os.path.join("output", "model_final.pth")])
+                         # os.path.join('runs', f"{cfg.DATASETS.TRAIN[0]}_{str(seed)}", "model_final.pth")])
     cfg.freeze()
     default_setup(cfg, args)
     return cfg

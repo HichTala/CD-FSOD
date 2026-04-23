@@ -33,4 +33,4 @@ KD:
   LOSS_WEIGHT: 4.0
 OUTPUT_DIR: "checkpoints/dota/1shot"
 TEST:
-  EVAL_PERIOD: 2000
+  EVAL_PERIOD: 1000
